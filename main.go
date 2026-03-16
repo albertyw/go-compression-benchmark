@@ -34,8 +34,8 @@ func main() {
 	}
 
 	if err := WriteResults(sections); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: cannot write RESULTS.md: %v\n", err)
+		fmt.Fprintf(os.Stderr, "ERROR: cannot write results: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println("Results written to RESULTS.md")
+	fmt.Printf("Results written to %s\n", resultsPath())
 }

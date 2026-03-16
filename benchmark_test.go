@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -62,7 +63,6 @@ func makeTestCompressor(name string) Compressor {
 		PureGo:  true,
 		Notes:   "test compressor",
 		Compress: func(data []byte) ([]byte, error) {
-			// Simple "compression": just copy
 			out := make([]byte, len(data))
 			copy(out, data)
 			return out, nil
@@ -162,7 +162,6 @@ func TestBenchmarkOneRoundtripMismatch(t *testing.T) {
 }
 
 func TestRunBenchmarks(t *testing.T) {
-	// Save and restore the global registry
 	saved := registry
 	defer func() { registry = saved }()
 
@@ -176,7 +175,6 @@ func TestRunBenchmarks(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
 	}
-	// Results should be sorted by compressed size
 	for i := 1; i < len(results); i++ {
 		if results[i].CompressedSize < results[i-1].CompressedSize {
 			t.Error("results not sorted by compressed size")
@@ -339,10 +337,111 @@ func TestFormatDuration(t *testing.T) {
 	}
 }
 
+func TestFormatPureGo(t *testing.T) {
+	tests := []struct {
+		name string
+		c    Compressor
+		want string
+	}{
+		{"empty library", Compressor{Library: ""}, "—"},
+		{"pure go", Compressor{Library: "lib", PureGo: true}, "Yes"},
+		{"not pure go", Compressor{Library: "lib", PureGo: false}, "No"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := formatPureGo(tt.c)
+			if got != tt.want {
+				t.Errorf("formatPureGo() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// --- Library link tests ---
+
+func TestLibraryURL(t *testing.T) {
+	tests := []struct {
+		library string
+		want    string
+	}{
+		{"", ""},
+		{"compress/gzip", "https://pkg.go.dev/compress/gzip"},
+		{"github.com/klauspost/compress/zstd", "https://github.com/klauspost/compress"},
+		{"github.com/klauspost/compress/gzip", "https://github.com/klauspost/compress"},
+		{"github.com/klauspost/compress/s2", "https://github.com/klauspost/compress"},
+		{"github.com/andybalholm/brotli", "https://github.com/andybalholm/brotli"},
+		{"github.com/golang/snappy", "https://github.com/golang/snappy"},
+		{"github.com/pierrec/lz4/v4", "https://github.com/pierrec/lz4"},
+		{"github.com/ulikunitz/xz", "https://github.com/ulikunitz/xz"},
+		{"github.com/klauspost/pgzip", "https://github.com/klauspost/pgzip"},
+		{"github.com/klauspost/compress/flate", "https://github.com/klauspost/compress"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.library, func(t *testing.T) {
+			got := libraryURL(tt.library)
+			if got != tt.want {
+				t.Errorf("libraryURL(%q) = %q, want %q", tt.library, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLibraryLink(t *testing.T) {
+	tests := []struct {
+		name    string
+		library string
+		want    string
+	}{
+		{"Zstd", "github.com/klauspost/compress/zstd", "[Zstd](https://github.com/klauspost/compress)"},
+		{"(none)", "", "(none)"},
+		{"Gzip stdlib", "compress/gzip", "[Gzip stdlib](https://pkg.go.dev/compress/gzip)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := libraryLink(tt.name, tt.library)
+			if got != tt.want {
+				t.Errorf("libraryLink(%q, %q) = %q, want %q", tt.name, tt.library, got, tt.want)
+			}
+		})
+	}
+}
+
+// --- getCPUModel test ---
+
+func TestGetCPUModel(t *testing.T) {
+	model := getCPUModel()
+	if model == "" {
+		t.Error("getCPUModel() returned empty string")
+	}
+	// On Linux it should return a real model; on other platforms "unknown" is acceptable
+}
+
+// --- resultsPath test ---
+
+func TestResultsPath(t *testing.T) {
+	path := resultsPath()
+	if !strings.HasPrefix(path, "results/") {
+		t.Errorf("resultsPath() should start with 'results/', got %q", path)
+	}
+	if !strings.HasSuffix(path, ".md") {
+		t.Errorf("resultsPath() should end with '.md', got %q", path)
+	}
+	// Should contain arch and OS
+	if !strings.Contains(path, runtime.GOARCH) {
+		t.Errorf("resultsPath() should contain GOARCH %q, got %q", runtime.GOARCH, path)
+	}
+	if !strings.Contains(path, runtime.GOOS) {
+		t.Errorf("resultsPath() should contain GOOS %q, got %q", runtime.GOOS, path)
+	}
+	// Should contain a date pattern
+	if !strings.Contains(path, "-") {
+		t.Errorf("resultsPath() should contain date separators, got %q", path)
+	}
+}
+
 // --- WriteResults tests ---
 
 func TestWriteResults(t *testing.T) {
-	// Write to a temp file by changing to temp dir
 	origDir, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -362,7 +461,7 @@ func TestWriteResults(t *testing.T) {
 					Compressor: Compressor{
 						Name:    "TestLib",
 						Level:   "fast",
-						Library: "test/lib",
+						Library: "github.com/example/testlib",
 						PureGo:  true,
 						Notes:   "test notes",
 					},
@@ -397,11 +496,28 @@ func TestWriteResults(t *testing.T) {
 		t.Fatalf("WriteResults: %v", err)
 	}
 
-	content, err := os.ReadFile("RESULTS.md")
+	content, err := os.ReadFile(resultsPath())
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
 	}
 	s := string(content)
+
+	// Check environment section
+	if !strings.Contains(s, "## Environment") {
+		t.Error("missing Environment section")
+	}
+	if !strings.Contains(s, "**CPU:**") {
+		t.Error("missing CPU info")
+	}
+	if !strings.Contains(s, "**Architecture:**") {
+		t.Error("missing Architecture info")
+	}
+	if !strings.Contains(s, "**OS:**") {
+		t.Error("missing OS info")
+	}
+	if !strings.Contains(s, "**Go:**") {
+		t.Error("missing Go version")
+	}
 
 	// Check structure
 	if !strings.Contains(s, "# Compression Benchmark Results") {
@@ -410,19 +526,34 @@ func TestWriteResults(t *testing.T) {
 	if !strings.Contains(s, "## test.dat (1,000 bytes)") {
 		t.Error("missing section header")
 	}
-	if !strings.Contains(s, "| TestLib | fast |") {
-		t.Error("missing TestLib row")
+
+	// Check separate compression and decompression tables
+	if !strings.Contains(s, "### Compression") {
+		t.Error("missing Compression subsection")
 	}
+	if !strings.Contains(s, "### Decompression") {
+		t.Error("missing Decompression subsection")
+	}
+
+	// Check library link
+	if !strings.Contains(s, "[TestLib](https://github.com/example/testlib)") {
+		t.Error("missing TestLib github link")
+	}
+
+	// NoLib (no library) should not be linked
+	if !strings.Contains(s, "| NoLib |") {
+		t.Error("missing NoLib row")
+	}
+
+	// Check PureGo column values
 	if !strings.Contains(s, "| Yes |") {
 		t.Error("missing Pure Go Yes")
 	}
-	if !strings.Contains(s, "| NoLib | — |") {
-		t.Error("missing NoLib row")
-	}
-	// NoLib has empty Library, so PureGo should show "—"
 	if !strings.Contains(s, "| — | baseline |") {
 		t.Error("missing baseline with — for PureGo")
 	}
+
+	// Notes section
 	if !strings.Contains(s, "## Notes") {
 		t.Error("missing notes section")
 	}
@@ -464,7 +595,7 @@ func TestWriteResultsPureGoNo(t *testing.T) {
 		t.Fatalf("WriteResults: %v", err)
 	}
 
-	content, err := os.ReadFile("RESULTS.md")
+	content, err := os.ReadFile(resultsPath())
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
 	}
