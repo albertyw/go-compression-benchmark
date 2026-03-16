@@ -24,7 +24,7 @@ func init() {
 			Level:   level.name,
 			Library: "github.com/klauspost/compress/s2",
 			PureGo:  true,
-			Notes:   "Snappy-compatible decoding; S2-compressed data cannot be decoded by Snappy decoders",
+			Notes:   "S2 can decode Snappy data, but Snappy decoders cannot decode S2 output",
 			Compress: func(data []byte) ([]byte, error) {
 				var buf bytes.Buffer
 				w := s2.NewWriter(&buf, level.options...)

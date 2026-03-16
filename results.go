@@ -57,6 +57,8 @@ func WriteResults(sections []ResultSection) error {
 	sb.WriteString("- Times measured via monotonic clock (time.Since) in timing-only runs\n")
 	sb.WriteString("- Memory/allocs measured via runtime.MemStats deltas in separate memory-only runs (after runtime.GC())\n")
 	sb.WriteString("- Rows sorted by compressed size ascending within each table\n")
+	sb.WriteString("- Ratio = original size / compressed size (higher is better)\n")
+	sb.WriteString("- Memory figures are approximate; runtime.MemStats uses process-global counters, so allocations from concurrent goroutines may be included\n")
 
 	return os.WriteFile("RESULTS.md", []byte(sb.String()), 0644)
 }
