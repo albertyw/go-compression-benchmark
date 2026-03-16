@@ -13,8 +13,9 @@ go vet ./...         # lint
 
 ## Architecture
 - `main.go` — entry point: loads data files, runs benchmarks, writes RESULTS.md
-- `compressor.go` — Compressor struct + registry (Register/GetAll)
-- `compressors/` — one file per library, registers via init()
+- `compressor.go` — Compressor struct (Name, Level, Library, etc.) + registry (Register/GetAll)
+- `compressor_*.go` — one file per library in root package main, registers via init()
+- `benchmark.go` — benchmark runner with warmup, timing, and memory measurement passes
 - `results.go` — markdown table formatter
 
 ## Conventions
