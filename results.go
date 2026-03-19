@@ -16,8 +16,9 @@ type ResultSection struct {
 	Results  []BenchmarkResult
 }
 
-// WriteResults writes benchmark results to RESULTS.md.
-func WriteResults(sections []ResultSection) error {
+// WriteResults writes benchmark results for one data file to a results file.
+// Returns the path of the written file.
+func WriteResults(section ResultSection) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("# Compression Benchmark Results\n\n")
 
@@ -29,43 +30,41 @@ func WriteResults(sections []ResultSection) error {
 	sb.WriteString(fmt.Sprintf("- **Go:** %s\n", runtime.Version()))
 	sb.WriteString("\n")
 
-	for _, section := range sections {
-		sb.WriteString(fmt.Sprintf("## %s (%s bytes)\n\n", section.FileName, formatInt(section.FileSize)))
+	sb.WriteString(fmt.Sprintf("## %s (%s bytes)\n\n", section.FileName, formatInt(section.FileSize)))
 
-		// Compression table
-		sb.WriteString("### Compression\n\n")
-		sb.WriteString("| Library | Level | Compressed Size | Ratio | Time | Memory | Allocs | Pure Go | Notes |\n")
-		sb.WriteString("|---------|-------|----------------|-------|------|--------|--------|---------|-------|\n")
-		for _, r := range section.Results {
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
-				libraryLink(r.Compressor.Name, r.Compressor.Library),
-				r.Compressor.Level,
-				formatBytes(r.CompressedSize),
-				formatRatio(r.Ratio),
-				formatDuration(r.CompressTime),
-				formatBytes(int(r.CompressMem)),
-				formatInt(int(r.CompressAllocs)),
-				formatPureGo(r.Compressor),
-				r.Compressor.Notes,
-			))
-		}
-		sb.WriteString("\n")
-
-		// Decompression table
-		sb.WriteString("### Decompression\n\n")
-		sb.WriteString("| Library | Level | Time | Memory | Allocs |\n")
-		sb.WriteString("|---------|-------|------|--------|--------|\n")
-		for _, r := range section.Results {
-			sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n",
-				libraryLink(r.Compressor.Name, r.Compressor.Library),
-				r.Compressor.Level,
-				formatDuration(r.DecompressTime),
-				formatBytes(int(r.DecompressMem)),
-				formatInt(int(r.DecompressAllocs)),
-			))
-		}
-		sb.WriteString("\n")
+	// Compression table
+	sb.WriteString("### Compression\n\n")
+	sb.WriteString("| Library | Level | Compressed Size | Ratio | Time | Memory | Allocs | Pure Go | Notes |\n")
+	sb.WriteString("|---------|-------|----------------|-------|------|--------|--------|---------|-------|\n")
+	for _, r := range section.Results {
+		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n",
+			libraryLink(r.Compressor.Name, r.Compressor.Library),
+			r.Compressor.Level,
+			formatBytes(r.CompressedSize),
+			formatRatio(r.Ratio),
+			formatDuration(r.CompressTime),
+			formatBytes(int(r.CompressMem)),
+			formatInt(int(r.CompressAllocs)),
+			formatPureGo(r.Compressor),
+			r.Compressor.Notes,
+		))
 	}
+	sb.WriteString("\n")
+
+	// Decompression table
+	sb.WriteString("### Decompression\n\n")
+	sb.WriteString("| Library | Level | Time | Memory | Allocs |\n")
+	sb.WriteString("|---------|-------|------|--------|--------|\n")
+	for _, r := range section.Results {
+		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s | %s |\n",
+			libraryLink(r.Compressor.Name, r.Compressor.Library),
+			r.Compressor.Level,
+			formatDuration(r.DecompressTime),
+			formatBytes(int(r.DecompressMem)),
+			formatInt(int(r.DecompressAllocs)),
+		))
+	}
+	sb.WriteString("\n")
 
 	sb.WriteString("## Notes\n\n")
 	sb.WriteString("- All libraries are pure Go with no CGo dependencies\n")
@@ -76,17 +75,18 @@ func WriteResults(sections []ResultSection) error {
 	sb.WriteString("- Ratio = original size / compressed size (higher is better)\n")
 	sb.WriteString("- Memory figures are approximate; runtime.MemStats uses process-global counters, so allocations from concurrent goroutines may be included\n")
 
-	path := resultsPath()
+	path := resultsPath(section.FileName)
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
+		return "", err
 	}
-	return os.WriteFile(path, []byte(sb.String()), 0644)
+	return path, os.WriteFile(path, []byte(sb.String()), 0644)
 }
 
-// resultsPath returns the output file path, e.g. "results/2026-03-15-amd64-linux.md".
-func resultsPath() string {
+// resultsPath returns the output file path, e.g. "results/data-2026-03-15-amd64-linux.md".
+func resultsPath(dataFileName string) string {
+	base := strings.TrimSuffix(dataFileName, filepath.Ext(dataFileName))
 	date := time.Now().Format("2006-01-02")
-	return filepath.Join("results", fmt.Sprintf("%s-%s-%s.md", date, runtime.GOARCH, runtime.GOOS))
+	return filepath.Join("results", fmt.Sprintf("%s-%s-%s-%s.md", base, date, runtime.GOARCH, runtime.GOOS))
 }
 
 func formatPureGo(c Compressor) string {

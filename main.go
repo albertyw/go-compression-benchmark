@@ -44,7 +44,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	var sections []ResultSection
 	for _, f := range files {
 		data, err := os.ReadFile(filepath.Clean(f.path))
 		if err != nil {
@@ -53,16 +52,16 @@ func main() {
 		}
 		fmt.Printf("Benchmarking %s (%d bytes)...\n", f.name, len(data))
 		results := RunBenchmarks(data)
-		sections = append(sections, ResultSection{
+		section := ResultSection{
 			FileName: f.name,
 			FileSize: len(data),
 			Results:  results,
-		})
+		}
+		path, err := WriteResults(section)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: cannot write results: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Results written to %s\n", path)
 	}
-
-	if err := WriteResults(sections); err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: cannot write results: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Printf("Results written to %s\n", resultsPath())
 }

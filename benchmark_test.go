@@ -419,12 +419,16 @@ func TestGetCPUModel(t *testing.T) {
 // --- resultsPath test ---
 
 func TestResultsPath(t *testing.T) {
-	path := resultsPath()
+	path := resultsPath("data.h3")
 	if !strings.HasPrefix(path, "results/") {
 		t.Errorf("resultsPath() should start with 'results/', got %q", path)
 	}
 	if !strings.HasSuffix(path, ".md") {
 		t.Errorf("resultsPath() should end with '.md', got %q", path)
+	}
+	// Should contain data file base name (without extension)
+	if !strings.Contains(path, "data") {
+		t.Errorf("resultsPath() should contain data file name, got %q", path)
 	}
 	// Should contain arch and OS
 	if !strings.Contains(path, runtime.GOARCH) {
@@ -452,51 +456,49 @@ func TestWriteResults(t *testing.T) {
 	}
 	defer os.Chdir(origDir)
 
-	sections := []ResultSection{
-		{
-			FileName: "test.dat",
-			FileSize: 1000,
-			Results: []BenchmarkResult{
-				{
-					Compressor: Compressor{
-						Name:    "TestLib",
-						Level:   "fast",
-						Library: "github.com/example/testlib",
-						PureGo:  true,
-						Notes:   "test notes",
-					},
-					OriginalSize:     1000,
-					CompressedSize:   500,
-					Ratio:            2.0,
-					CompressTime:     10 * time.Millisecond,
-					DecompressTime:   5 * time.Millisecond,
-					CompressMem:      1024,
-					CompressAllocs:   10,
-					DecompressMem:    512,
-					DecompressAllocs: 5,
+	section := ResultSection{
+		FileName: "test.dat",
+		FileSize: 1000,
+		Results: []BenchmarkResult{
+			{
+				Compressor: Compressor{
+					Name:    "TestLib",
+					Level:   "fast",
+					Library: "github.com/example/testlib",
+					PureGo:  true,
+					Notes:   "test notes",
 				},
-				{
-					Compressor: Compressor{
-						Name:    "NoLib",
-						Level:   "—",
-						Library: "",
-						PureGo:  false,
-						Notes:   "baseline",
-					},
-					OriginalSize:   1000,
-					CompressedSize: 1000,
-					Ratio:          1.0,
+				OriginalSize:     1000,
+				CompressedSize:   500,
+				Ratio:            2.0,
+				CompressTime:     10 * time.Millisecond,
+				DecompressTime:   5 * time.Millisecond,
+				CompressMem:      1024,
+				CompressAllocs:   10,
+				DecompressMem:    512,
+				DecompressAllocs: 5,
+			},
+			{
+				Compressor: Compressor{
+					Name:    "NoLib",
+					Level:   "—",
+					Library: "",
+					PureGo:  false,
+					Notes:   "baseline",
 				},
+				OriginalSize:   1000,
+				CompressedSize: 1000,
+				Ratio:          1.0,
 			},
 		},
 	}
 
-	err = WriteResults(sections)
+	path, err := WriteResults(section)
 	if err != nil {
 		t.Fatalf("WriteResults: %v", err)
 	}
 
-	content, err := os.ReadFile(resultsPath())
+	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
 	}
@@ -573,29 +575,27 @@ func TestWriteResultsPureGoNo(t *testing.T) {
 	}
 	defer os.Chdir(origDir)
 
-	sections := []ResultSection{
-		{
-			FileName: "test.dat",
-			FileSize: 100,
-			Results: []BenchmarkResult{
-				{
-					Compressor: Compressor{
-						Name:    "CgoLib",
-						Level:   "default",
-						Library: "cgo/lib",
-						PureGo:  false,
-					},
+	section := ResultSection{
+		FileName: "test.dat",
+		FileSize: 100,
+		Results: []BenchmarkResult{
+			{
+				Compressor: Compressor{
+					Name:    "CgoLib",
+					Level:   "default",
+					Library: "cgo/lib",
+					PureGo:  false,
 				},
 			},
 		},
 	}
 
-	err = WriteResults(sections)
+	path, err := WriteResults(section)
 	if err != nil {
 		t.Fatalf("WriteResults: %v", err)
 	}
 
-	content, err := os.ReadFile(resultsPath())
+	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
 	}
