@@ -1,4 +1,4 @@
-.PHONY: all build test benchmark vet
+.PHONY: all build test benchmark vet clean
 
 all: build
 
@@ -13,3 +13,6 @@ vet:
 
 benchmark: build
 	./benchmark
+
+clean:
+	rm -f benchmark
