@@ -1,5 +1,9 @@
 # Go Compression Benchmark
 
+[![Build Status](https://drone.albertyw.com/api/badges/albertyw/go-compression-benchmark/status.svg)](https://drone.albertyw.com/albertyw/go-compression-benchmark)
+
+Read a summary at https://www.albertyw.com/note/go-compression-benchmarks
+
 Comparing performance of Go compression libraries against real-world binary data ([H3 timezone cells](https://github.com/albertyw/localtimezone)). Measures compression ratio, speed, memory usage, and allocations across multiple compression levels.
 
 ## Libraries Tested
