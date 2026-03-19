@@ -1,0 +1,15 @@
+kind: pipeline
+type: docker
+name: test
+
+steps:
+  - name: Test Go
+    image: golang:1.26
+    commands:
+      - make vet
+      - make test
+
+  - name: Test Makefile
+    image: cytopia/checkmake:latest
+    commands:
+      - checkmake Makefile
