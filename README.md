@@ -21,39 +21,39 @@ All libraries are pure Go with no CGo dependencies, ensuring full cross-platform
 
 ## Results
 
-See [RESULTS.md](RESULTS.md) for full benchmark tables. Highlights on the 8.5 MB test file:
-
-| Library | Level | Ratio | Compress | Decompress |
-|---------|-------|-------|----------|------------|
-| XZ/LZMA2 | default | 10.33x | 449ms | 97ms |
-| Zstd | SpeedFastest | 5.78x | 34ms | 13ms |
-| Zstd | SpeedBestCompression | 6.67x | 317ms | 14ms |
-| Brotli | Best (11) | 7.79x | 10.1s | 25ms |
-| pgzip | BestSpeed | 5.16x | 5.6ms | 14ms |
-| Snappy | default | 2.19x | 8ms | 6ms |
-| S2 | Better | 2.40x | 5.9ms | 6ms |
+See [RESULTS.md](RESULTS.md) for the summary and analysis. Raw per-run tables are in [`results/`](results/).
 
 ## Build & Run
 
 ```bash
+make test       # run tests
+make benchmark  # build and run benchmarks, writes to results/
+```
+
+Or manually:
+
+```bash
+go mod tidy
 go build -o benchmark .
 ./benchmark
 ```
 
-This reads the test data files and writes results to `RESULTS.md`.
+Benchmark output is written to `results/<datafile>-<date>-<arch>-<os>.md`.
 
 ## Test Data
 
-- `data.h3` (~8.5 MB) -- real H3 timezone binary data from [localtimezone](https://github.com/albertyw/localtimezone)
-- `data_mock.h3` (~1.2 KB) -- small mock data for quick validation
+Sample data files live in `sample_data/`. The benchmarker auto-discovers all files in that directory.
+
+- `data.h3` (~8.5 MB) — real H3 timezone binary data from [localtimezone](https://github.com/albertyw/localtimezone)
+- `data_mock.h3` (~1.2 KB) — small mock data for quick validation
 
 ## Architecture
 
-- `main.go` -- entry point: loads data files, runs benchmarks, writes RESULTS.md
-- `compressor.go` -- `Compressor` struct (Name, Level, Library, compress/decompress functions) and registry
-- `compressor_*.go` -- one file per library, registers variants via `init()`
-- `benchmark.go` -- benchmark runner with warmup, separate timing and memory measurement passes, median calculation
-- `results.go` -- markdown table formatter
+- `main.go` — entry point: discovers files in `sample_data/`, runs benchmarks, writes `results/`
+- `compressors/compressor.go` — `Compressor` struct and registry (`Register`/`GetAll`)
+- `compressors/compressor_*.go` — one file per library, registers variants via `init()`
+- `benchmark.go` — benchmark runner with warmup, separate timing and memory passes, median calculation
+- `results.go` — markdown table formatter
 
 ## Methodology
 
@@ -66,10 +66,10 @@ This reads the test data files and writes results to `RESULTS.md`.
 
 ## Adding a Compressor
 
-Create a new `compressor_name.go` file in the root directory:
+Create a new `compressors/compressor_name.go` file:
 
 ```go
-package main
+package compressors
 
 func init() {
     Register(Compressor{
