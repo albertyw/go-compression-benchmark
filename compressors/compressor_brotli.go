@@ -1,9 +1,11 @@
-package main
+package compressors
 
 import (
 	"bytes"
-	"compress/gzip"
+	"fmt"
 	"io"
+
+	"github.com/andybalholm/brotli"
 )
 
 func init() {
@@ -11,24 +13,21 @@ func init() {
 		name  string
 		level int
 	}{
-		{"BestSpeed", gzip.BestSpeed},
-		{"Default", gzip.DefaultCompression},
-		{"BestCompression", gzip.BestCompression},
+		{"Fast", 1},
+		{"Default", 6},
+		{"Best", 11},
 	}
 	for _, l := range levels {
 		level := l
 		Register(Compressor{
-			Name:    "Gzip stdlib",
-			Level:   level.name,
-			Library: "compress/gzip",
+			Name:    "Brotli",
+			Level:   fmt.Sprintf("%s (%d)", level.name, level.level),
+			Library: "github.com/andybalholm/brotli",
 			PureGo:  true,
-			Notes:   "Part of Go stdlib, guaranteed cross-platform support",
+			Notes:   "Pure Go, fully portable",
 			Compress: func(data []byte) ([]byte, error) {
 				var buf bytes.Buffer
-				w, err := gzip.NewWriterLevel(&buf, level.level)
-				if err != nil {
-					return nil, err
-				}
+				w := brotli.NewWriterLevel(&buf, level.level)
 				if _, err := w.Write(data); err != nil {
 					return nil, err
 				}
@@ -38,11 +37,7 @@ func init() {
 				return buf.Bytes(), nil
 			},
 			Decompress: func(data []byte) ([]byte, error) {
-				r, err := gzip.NewReader(bytes.NewReader(data))
-				if err != nil {
-					return nil, err
-				}
-				defer r.Close()
+				r := brotli.NewReader(bytes.NewReader(data))
 				return io.ReadAll(r)
 			},
 		})

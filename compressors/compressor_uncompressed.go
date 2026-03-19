@@ -1,4 +1,4 @@
-package main
+package compressors
 
 func init() {
 	Register(Compressor{

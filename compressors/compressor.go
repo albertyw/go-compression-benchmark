@@ -1,4 +1,4 @@
-package main
+package compressors
 
 // Compressor defines a compression algorithm with its metadata and functions.
 type Compressor struct {
@@ -11,14 +11,14 @@ type Compressor struct {
 	Decompress func([]byte) ([]byte, error) // decompress back to original
 }
 
-var registry []Compressor
+var Registry []Compressor
 
 // Register adds a compressor to the global registry.
 func Register(c Compressor) {
-	registry = append(registry, c)
+	Registry = append(Registry, c)
 }
 
 // GetAll returns all registered compressors.
 func GetAll() []Compressor {
-	return registry
+	return Registry
 }

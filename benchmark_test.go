@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/albertyw/go-compression-benchmark/compressors"
 )
 
 // --- Roundtrip tests ---
@@ -16,7 +18,7 @@ func TestRoundtrip(t *testing.T) {
 		"It needs to be long enough to be compressible by most algorithms. " +
 		"Repeating patterns help: aaaaabbbbbcccccdddddeeeee aaaaabbbbbcccccdddddeeeee")
 
-	for _, c := range GetAll() {
+	for _, c := range compressors.GetAll() {
 		t.Run(c.Name+"/"+c.Level, func(t *testing.T) {
 			compressed, err := c.Compress(testData)
 			if err != nil {
@@ -36,7 +38,7 @@ func TestRoundtrip(t *testing.T) {
 func TestRoundtripEmpty(t *testing.T) {
 	testData := []byte{}
 
-	for _, c := range GetAll() {
+	for _, c := range compressors.GetAll() {
 		t.Run(c.Name+"/"+c.Level, func(t *testing.T) {
 			compressed, err := c.Compress(testData)
 			if err != nil {
@@ -55,8 +57,8 @@ func TestRoundtripEmpty(t *testing.T) {
 
 // --- Benchmark runner tests ---
 
-func makeTestCompressor(name string) Compressor {
-	return Compressor{
+func makeTestCompressor(name string) compressors.Compressor {
+	return compressors.Compressor{
 		Name:    name,
 		Level:   "test",
 		Library: "test/lib",
@@ -102,7 +104,7 @@ func TestBenchmarkOne(t *testing.T) {
 }
 
 func TestBenchmarkOneCompressError(t *testing.T) {
-	c := Compressor{
+	c := compressors.Compressor{
 		Name:  "failing",
 		Level: "test",
 		Compress: func(data []byte) ([]byte, error) {
@@ -122,7 +124,7 @@ func TestBenchmarkOneCompressError(t *testing.T) {
 }
 
 func TestBenchmarkOneDecompressError(t *testing.T) {
-	c := Compressor{
+	c := compressors.Compressor{
 		Name:  "failing-decompress",
 		Level: "test",
 		Compress: func(data []byte) ([]byte, error) {
@@ -142,7 +144,7 @@ func TestBenchmarkOneDecompressError(t *testing.T) {
 }
 
 func TestBenchmarkOneRoundtripMismatch(t *testing.T) {
-	c := Compressor{
+	c := compressors.Compressor{
 		Name:  "mismatch",
 		Level: "test",
 		Compress: func(data []byte) ([]byte, error) {
@@ -162,12 +164,12 @@ func TestBenchmarkOneRoundtripMismatch(t *testing.T) {
 }
 
 func TestRunBenchmarks(t *testing.T) {
-	saved := registry
-	defer func() { registry = saved }()
+	saved := compressors.Registry
+	defer func() { compressors.Registry = saved }()
 
-	registry = nil
-	Register(makeTestCompressor("A"))
-	Register(makeTestCompressor("B"))
+	compressors.Registry = nil
+	compressors.Register(makeTestCompressor("A"))
+	compressors.Register(makeTestCompressor("B"))
 
 	data := []byte("some test data for RunBenchmarks")
 	results := RunBenchmarks(data)
@@ -183,12 +185,12 @@ func TestRunBenchmarks(t *testing.T) {
 }
 
 func TestRunBenchmarksSkipsErrors(t *testing.T) {
-	saved := registry
-	defer func() { registry = saved }()
+	saved := compressors.Registry
+	defer func() { compressors.Registry = saved }()
 
-	registry = nil
-	Register(makeTestCompressor("good"))
-	Register(Compressor{
+	compressors.Registry = nil
+	compressors.Register(makeTestCompressor("good"))
+	compressors.Register(compressors.Compressor{
 		Name:  "bad",
 		Level: "test",
 		Compress: func(data []byte) ([]byte, error) {
@@ -340,12 +342,12 @@ func TestFormatDuration(t *testing.T) {
 func TestFormatPureGo(t *testing.T) {
 	tests := []struct {
 		name string
-		c    Compressor
+		c    compressors.Compressor
 		want string
 	}{
-		{"empty library", Compressor{Library: ""}, "—"},
-		{"pure go", Compressor{Library: "lib", PureGo: true}, "Yes"},
-		{"not pure go", Compressor{Library: "lib", PureGo: false}, "No"},
+		{"empty library", compressors.Compressor{Library: ""}, "—"},
+		{"pure go", compressors.Compressor{Library: "lib", PureGo: true}, "Yes"},
+		{"not pure go", compressors.Compressor{Library: "lib", PureGo: false}, "No"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -461,7 +463,7 @@ func TestWriteResults(t *testing.T) {
 		FileSize: 1000,
 		Results: []BenchmarkResult{
 			{
-				Compressor: Compressor{
+				Compressor: compressors.Compressor{
 					Name:    "TestLib",
 					Level:   "fast",
 					Library: "github.com/example/testlib",
@@ -479,7 +481,7 @@ func TestWriteResults(t *testing.T) {
 				DecompressAllocs: 5,
 			},
 			{
-				Compressor: Compressor{
+				Compressor: compressors.Compressor{
 					Name:    "NoLib",
 					Level:   "—",
 					Library: "",
@@ -580,7 +582,7 @@ func TestWriteResultsPureGoNo(t *testing.T) {
 		FileSize: 100,
 		Results: []BenchmarkResult{
 			{
-				Compressor: Compressor{
+				Compressor: compressors.Compressor{
 					Name:    "CgoLib",
 					Level:   "default",
 					Library: "cgo/lib",

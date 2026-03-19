@@ -1,10 +1,10 @@
-package main
+package compressors
 
 import (
 	"bytes"
 	"io"
 
-	kgzip "github.com/klauspost/compress/gzip"
+	kflate "github.com/klauspost/compress/flate"
 )
 
 func init() {
@@ -12,21 +12,21 @@ func init() {
 		name  string
 		level int
 	}{
-		{"BestSpeed", kgzip.BestSpeed},
-		{"Default", kgzip.DefaultCompression},
-		{"BestCompression", kgzip.BestCompression},
+		{"BestSpeed", kflate.BestSpeed},
+		{"Default", kflate.DefaultCompression},
+		{"BestCompression", kflate.BestCompression},
 	}
 	for _, l := range levels {
 		level := l
 		Register(Compressor{
-			Name:    "Gzip klauspost",
+			Name:    "Deflate klauspost",
 			Level:   level.name,
-			Library: "github.com/klauspost/compress/gzip",
+			Library: "github.com/klauspost/compress/flate",
 			PureGo:  true,
 			Notes:   "Drop-in stdlib replacement, assembly optimizations on amd64",
 			Compress: func(data []byte) ([]byte, error) {
 				var buf bytes.Buffer
-				w, err := kgzip.NewWriterLevel(&buf, level.level)
+				w, err := kflate.NewWriter(&buf, level.level)
 				if err != nil {
 					return nil, err
 				}
@@ -39,10 +39,7 @@ func init() {
 				return buf.Bytes(), nil
 			},
 			Decompress: func(data []byte) ([]byte, error) {
-				r, err := kgzip.NewReader(bytes.NewReader(data))
-				if err != nil {
-					return nil, err
-				}
+				r := kflate.NewReader(bytes.NewReader(data))
 				defer r.Close()
 				return io.ReadAll(r)
 			},

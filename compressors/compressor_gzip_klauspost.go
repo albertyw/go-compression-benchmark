@@ -1,10 +1,10 @@
-package main
+package compressors
 
 import (
 	"bytes"
 	"io"
 
-	"github.com/klauspost/pgzip"
+	kgzip "github.com/klauspost/compress/gzip"
 )
 
 func init() {
@@ -12,21 +12,21 @@ func init() {
 		name  string
 		level int
 	}{
-		{"BestSpeed", pgzip.BestSpeed},
-		{"Default", pgzip.DefaultCompression},
-		{"BestCompression", pgzip.BestCompression},
+		{"BestSpeed", kgzip.BestSpeed},
+		{"Default", kgzip.DefaultCompression},
+		{"BestCompression", kgzip.BestCompression},
 	}
 	for _, l := range levels {
 		level := l
 		Register(Compressor{
-			Name:    "pgzip",
+			Name:    "Gzip klauspost",
 			Level:   level.name,
-			Library: "github.com/klauspost/pgzip",
+			Library: "github.com/klauspost/compress/gzip",
 			PureGo:  true,
-			Notes:   "Parallel gzip — performance scales with CPU cores, results vary by machine",
+			Notes:   "Drop-in stdlib replacement, assembly optimizations on amd64",
 			Compress: func(data []byte) ([]byte, error) {
 				var buf bytes.Buffer
-				w, err := pgzip.NewWriterLevel(&buf, level.level)
+				w, err := kgzip.NewWriterLevel(&buf, level.level)
 				if err != nil {
 					return nil, err
 				}
@@ -39,7 +39,7 @@ func init() {
 				return buf.Bytes(), nil
 			},
 			Decompress: func(data []byte) ([]byte, error) {
-				r, err := pgzip.NewReader(bytes.NewReader(data))
+				r, err := kgzip.NewReader(bytes.NewReader(data))
 				if err != nil {
 					return nil, err
 				}

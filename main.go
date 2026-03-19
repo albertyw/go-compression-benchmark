@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	_ "github.com/albertyw/go-compression-benchmark/compressors"
 )
 
 const sampleDataDir = "sample_data"

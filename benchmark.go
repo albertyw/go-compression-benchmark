@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"sort"
 	"time"
+
+	"github.com/albertyw/go-compression-benchmark/compressors"
 )
 
 const (
@@ -15,7 +17,7 @@ const (
 
 // BenchmarkResult holds the median metrics for one compressor on one data file.
 type BenchmarkResult struct {
-	Compressor       Compressor
+	Compressor       compressors.Compressor
 	OriginalSize     int
 	CompressedSize   int
 	Ratio            float64
@@ -30,7 +32,7 @@ type BenchmarkResult struct {
 // RunBenchmarks benchmarks all registered compressors against the given data.
 func RunBenchmarks(data []byte) []BenchmarkResult {
 	var results []BenchmarkResult
-	for _, c := range GetAll() {
+	for _, c := range compressors.GetAll() {
 		fmt.Printf("  %s (%s)...\n", c.Name, c.Level)
 		result, err := benchmarkOne(c, data)
 		if err != nil {
@@ -45,7 +47,7 @@ func RunBenchmarks(data []byte) []BenchmarkResult {
 	return results
 }
 
-func benchmarkOne(c Compressor, data []byte) (BenchmarkResult, error) {
+func benchmarkOne(c compressors.Compressor, data []byte) (BenchmarkResult, error) {
 	// Warmup
 	for i := 0; i < warmupIterations; i++ {
 		compressed, err := c.Compress(data)

@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/albertyw/go-compression-benchmark/compressors"
 )
 
 // ResultSection groups benchmark results for one data file.
@@ -89,7 +91,7 @@ func resultsPath(dataFileName string) string {
 	return filepath.Join("results", fmt.Sprintf("%s-%s-%s-%s.md", base, date, runtime.GOARCH, runtime.GOOS))
 }
 
-func formatPureGo(c Compressor) string {
+func formatPureGo(c compressors.Compressor) string {
 	if c.Library == "" {
 		return "—"
 	}

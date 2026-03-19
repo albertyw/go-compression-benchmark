@@ -1,4 +1,4 @@
-package main
+package compressors
 
 import (
 	"github.com/golang/snappy"
