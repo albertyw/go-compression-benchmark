@@ -18,11 +18,11 @@ Zstd is the standout. At `SpeedFastest` it achieves a **5.78x ratio** in just **
 
 ### Fastest compression throughput: pgzip and S2
 
-pgzip (parallel gzip) compresses the 8.5 MB file in **5.6ms** at `BestSpeed` by using multiple CPU cores. S2 `Better` is close at **4.9ms** single-threaded. Both pay for this speed in ratio: pgzip gets ~5.16x, S2 `Better` only 2.40x. These are strong choices for pipelines where compression is on the critical path and throughput matters more than size.
+pgzip (parallel gzip) compresses the 8.5 MB file in **5.6ms** at `BestSpeed` by using multiple CPU cores. S2 `Better` is close at **4.9ms** single-threaded, with `Default` slightly behind at 5.3ms but a lower ratio (2.07x vs 2.40x). S2 `Best` trades compression speed for decompression speed — it takes **53ms** to compress but reaches **5ms** decompression. pgzip and S2 `Better`/`Default` are strong choices for pipelines where compression is on the critical path and throughput matters more than size.
 
 ### Fastest decompression: Snappy and S2
 
-Snappy decompresses in **4.6ms** with just 1 allocation — the lowest overhead of any library. S2 `Best` is similarly fast at 5ms. These are the right choices if decompression latency is the primary concern and a lower compression ratio is acceptable.
+Snappy decompresses in **4.6ms** with just 1 allocation — the lowest overhead of any library. S2 `Best` is similarly fast at **5ms**, followed by S2 `Better` at 7ms and S2 `Default` at 8.5ms. These are the right choices if decompression latency is the primary concern and a lower compression ratio is acceptable.
 
 ### Brotli: excellent ratio, terrible compression speed
 
@@ -45,8 +45,10 @@ If you want zero dependencies beyond the standard library, `compress/gzip` at `D
 | Gzip stdlib | Default | 5.36x | 197ms | 24ms | Zero dependencies |
 | Gzip klauspost | Default | 5.26x | 35ms | 15ms | Fast stdlib replacement |
 | pgzip | BestSpeed | 5.16x | 5.6ms | 17ms | Fastest compress (parallel) |
-| S2 | Better | 2.40x | 4.9ms | 7ms | Fast, low ratio |
+| S2 | Better | 2.40x | 4.9ms | 7ms | Fast compress, low ratio |
+| S2 | Best | 2.40x | 53ms | 5ms | Slow compress, fast decompress |
 | Snappy | — | 2.19x | 7.6ms | 4.6ms | Fastest decompress |
+| S2 | Default | 2.07x | 5.3ms | 8.5ms | Lowest ratio S2 option |
 
 ---
 
